@@ -75,20 +75,12 @@ class CodeGrader:
         
         # Tab tiêu chí
         self.criteria_tab = ttk.Frame(self.notebook)
-        self.notebook.add(self.criteria_tab, text="Tiêu chí")
+        self.notebook.add(self.criteria_tab, text="Tiêu chí OOP")
         
         self._setup_test_cases_ui()
         self._setup_criteria_ui()
 
     def _setup_test_cases_ui(self):
-        # Label hướng dẫn
-        guide_frame = ttk.Frame(self.test_tab)
-        guide_frame.pack(fill=tk.X, padx=5, pady=5)
-        guide_label = ttk.Label(guide_frame, 
-                              text="Thêm các trường hợp kiểm thử để đánh giá tính đúng đắn của mã nguồn",
-                              wraplength=500)
-        guide_label.pack(anchor='w')
-        
         # Frame chứa các test case
         self.test_cases_frame = ttk.Frame(self.test_tab)
         self.test_cases_frame.pack(fill=tk.BOTH, expand=True)
@@ -169,18 +161,25 @@ class CodeGrader:
         self.total_score_label = ttk.Label(self.result_frame, text="", font=("Arial", 16, "bold"))
         self.total_score_label.pack(pady=10)
         
+        # Kết quả chạy chương trình
+        program_output_frame = ttk.LabelFrame(self.result_frame, text="Kết quả chạy chương trình")
+        program_output_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        
+        self.program_output_text = scrolledtext.ScrolledText(program_output_frame, height=6)
+        self.program_output_text.pack(fill=tk.BOTH, expand=True)
+        
         # Kết quả test cases
         test_result_frame = ttk.LabelFrame(self.result_frame, text="Kết quả kiểm thử")
         test_result_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
         
-        self.test_result_text = scrolledtext.ScrolledText(test_result_frame, height=10)
+        self.test_result_text = scrolledtext.ScrolledText(test_result_frame, height=8)
         self.test_result_text.pack(fill=tk.BOTH, expand=True)
         
         # Kết quả tiêu chí
         criteria_result_frame = ttk.LabelFrame(self.result_frame, text="Kết quả tiêu chí OOP")
         criteria_result_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
         
-        self.criteria_result_text = scrolledtext.ScrolledText(criteria_result_frame, height=10)
+        self.criteria_result_text = scrolledtext.ScrolledText(criteria_result_frame, height=8)
         self.criteria_result_text.pack(fill=tk.BOTH, expand=True)
 
     def _add_test_case_ui(self, input_data="", expected_output=""):
@@ -254,16 +253,8 @@ class CodeGrader:
         remove_btn.grid(row=0, column=2, rowspan=2, padx=5)
 
     def _add_default_criteria(self):
-        default_criteria = [
-            ("Sử dụng kế thừa", "Lớp con kế thừa từ lớp cha và tái sử dụng/mở rộng chức năng"),
-            ("Đóng gói dữ liệu", "Sử dụng private/protected attributes và cung cấp getter/setter phù hợp"),
-            ("Tính đa hình", "Override các phương thức từ lớp cha trong lớp con"),
-            ("Tổ chức lớp", "Cấu trúc lớp rõ ràng, phương thức và thuộc tính phù hợp"),
-            ("Đặt tên chuẩn", "Tuân thủ PEP 8: ClassName, method_name, _private, self")
-        ]
-        
-        for name, description in default_criteria:
-            self._add_criterion_ui(name, description)
+        # Không thêm tiêu chí mặc định nữa
+        pass
 
     def _upload_file(self):
         file_path = filedialog.askopenfilename(
@@ -364,7 +355,7 @@ class CodeGrader:
         
         try:
             # Thực thi mã
-            exec(code_str)
+            exec(code_str, {}, {})  # Tạo namespace riêng cho mỗi lần chạy
             output = sys.stdout.getvalue().strip()
             
             # So sánh kết quả
@@ -382,6 +373,34 @@ class CodeGrader:
         
         try:
             code_str = self.code_editor.get('1.0', tk.END)
+            
+            # Chạy chương trình với đầu vào rỗng để xem kết quả chung
+            self.program_output_text.delete('1.0', tk.END)
+            try:
+                # Chuyển hướng stdout để bắt output
+                original_stdout = sys.stdout
+                sys.stdout = StringIO()
+                
+                # Tạo namespace riêng
+                local_namespace = {}
+                global_namespace = {}
+                
+                # Thực thi mã
+                try:
+                    exec(code_str, global_namespace, local_namespace)
+                    # Lấy và hiển thị output
+                    program_output = sys.stdout.getvalue()
+                    if program_output:
+                        self.program_output_text.insert('1.0', program_output)
+                    else:
+                        self.program_output_text.insert('1.0', "Chương trình không có output.\nLưu ý: Cần tạo đối tượng và gọi phương thức để có output.")
+                except Exception as e:
+                    self.program_output_text.insert('1.0', f"Lỗi khi chạy chương trình: {str(e)}")
+                
+                # Khôi phục stdout
+                sys.stdout = original_stdout
+            except Exception as e:
+                self.program_output_text.insert('1.0', f"Lỗi khi chạy chương trình:\n{str(e)}")
             
             # Chấm điểm test cases
             test_results = []
